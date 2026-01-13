@@ -4,16 +4,19 @@ use std::collections::VecDeque;
 
 struct SlidingWindow {
     search_buffer : VecDeque<u8>,
-    look_ahead_buffer : VecDeque<u8>,
-    max_sliding_window_size : usize,
+    look_ahead_buffer : VecDeque<u8>
 }
 
 impl SlidingWindow {
-    pub fn new(with_capacity : usize) -> Self {
-        SlidingWindow { 
-            search_buffer: VecDeque::with_capacity(with_capacity/2usize),
-            look_ahead_buffer: VecDeque::with_capacity(with_capacity/2usize),
-            max_sliding_window_size: with_capacity 
+    pub fn new(max_capacity : usize) -> Self {
+        let capa = if max_capacity % 2 == 1 {
+            (max_capacity-1usize)/2usize
+        } else {
+            max_capacity/2usize
+        };
+        SlidingWindow {
+            search_buffer: VecDeque::with_capacity(capa+1usize),
+            look_ahead_buffer: VecDeque::with_capacity(capa)
         }
     }
 
