@@ -1,6 +1,29 @@
 use anyhow::Result;
 use std::collections::VecDeque;
+struct Token {
+    delim : i8,
+    offset : usize,
+    length : usize,
+    sep : i8,
+    size : usize
+}
 
+impl Token {
+    pub fn new(offset_value : usize, length_value : usize) -> Self{
+        Token {
+            delim: -1i8,
+            offset : offset_value,
+            length : length_value,
+            sep: -2i8,
+            // Size of a token is the sizes of : the two delimiters + one separator + offset + length
+            size: size_of_val(&offset_value) + size_of_val(&length_value) + 2*size_of_val(&-1i8) + size_of_val(&-2i8)
+        }
+    }
+
+    pub fn get_size(&self) -> usize{
+        self.size
+    }
+}
 
 struct SlidingWindow {
     search_buffer : VecDeque<u8>,
@@ -43,4 +66,5 @@ impl SlidingWindow {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
 }
