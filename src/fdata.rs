@@ -1,6 +1,6 @@
 use anyhow::Result;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 pub fn get_file_data(p:&Path, buffer : &mut Box<Vec<u8>>) -> Result<()>{
     // Recover the mutable buffer content
@@ -30,7 +30,6 @@ mod tests {
         let path = binding.path();
         let mut content : Box<Vec<u8>> = Box::new(Vec::new());
         let res = get_file_data(path, &mut content);
-        let _ = res.as_ref().inspect_err(|e| eprintln!("failed to read file: {e}"));
         assert_eq!(res.is_ok(), true);
         assert_eq!(content.len() == 0, false);
     }
