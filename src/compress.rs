@@ -20,10 +20,10 @@ impl SlidingWindow {
         }
     }
 
-    pub fn slide(&mut self, next_byte : u8) -> Result<()> {
+    pub fn slide(&mut self, next_byte : &u8) -> Result<()> {
         // We are checking if the look_ahead_buffer is empty
         if self.look_ahead_buffer.is_empty() {
-            self.look_ahead_buffer.push_back(next_byte);
+            self.look_ahead_buffer.push_back(*next_byte);
             return Ok(())
         }
 
@@ -36,7 +36,7 @@ impl SlidingWindow {
         self.search_buffer.push_back(self.look_ahead_buffer.pop_front().unwrap());
 
         // Add the next byte to look_ahead_buffer
-        self.look_ahead_buffer.push_back(next_byte);
+        self.look_ahead_buffer.push_back(*next_byte);
         Ok(())
     }
 }
