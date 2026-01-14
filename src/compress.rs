@@ -1,5 +1,11 @@
 use anyhow::Result;
 use std::collections::VecDeque;
+
+enum Decision{
+    TakeToken(Token),
+    KeepChunkf
+}
+
 struct Token {
     delim : i8,
     offset : usize,
@@ -71,8 +77,44 @@ impl SlidingWindow {
     }
 
     pub fn slide(&mut self) -> Option<u8> {
-        match self.curr_byte == self.on.len() - 1usize { // Did we already seen all data ?
+        match self.curr_byte + 1usize < self.on.len() { // Is there a next byte ?
             true => {
+                match self.look_ahead_buffer.len() == self.look_ahead_buffer.capacity() { // the Sliding Window must be initialized properly
+                    true => {
+                        match self.search_buffer.len() < self.search_buffer.capacity() { // The search buffer is not full 
+                            true => { // We have to fill the search buffer before
+                                // We slide value from look_ahead to search
+                                self.search_buffer.push_back(self.look_ahead_buffer.pop_front().unwrap());
+
+                                // Slide from data to the look ahead
+                                self.look_ahead_buffer.push_back(*(self.on.get(self.curr_byte+1usize).unwrap()));
+                                // Update the current byte
+                                self.curr_byte += 1usize;
+                            
+                                return None
+                            },
+                            false => { // We just have to slide everything
+                                // Recover first byte
+                                let f_byte = self.search_buffer.pop_front().unwrap();
+
+                                // Slide from look ahead to search
+                                self.search_buffer.push_back(self.look_ahead_buffer.pop_front().unwrap());
+
+                                // Slide from data to the look ahead
+                                self.look_ahead_buffer.push_back(*(self.on.get(self.curr_byte+1usize).unwrap()));
+                                // Update the current byte
+                                self.curr_byte += 1usize;
+                            
+                                return Some(f_byte)
+                            }
+                        }
+                    },
+                    false => {
+                        panic!("Look Ahead Buffer not initialized properly !!!!");
+                    }
+                }
+            },
+            false => {
                 match self.look_ahead_buffer.is_empty() {
                     true => {
                         if !(self.search_buffer.is_empty()){ // search buffer is not empty
@@ -92,46 +134,6 @@ impl SlidingWindow {
                         return Some(f_byte)
                     }
                 }
-            },
-            false => {
-                match self.look_ahead_buffer.len() == self.look_ahead_buffer.capacity() { // the Sliding Window must be initialized properly
-                    true => {
-                        match self.search_buffer.len() < self.search_buffer.capacity() { // The search buffer is not full 
-                            true => { // We have to fill the search buffer before
-                                // We slide value from look_ahead to search
-                                self.search_buffer.push_back(self.look_ahead_buffer.pop_front().unwrap());
-
-                                // We need to check that there is a next byte
-                                if self.curr_byte+1usize < self.on.len(){
-                                    // Slide from data to the look ahead
-                                    self.look_ahead_buffer.push_back(*(self.on.get(self.curr_byte+1usize).unwrap()));
-                                    // Update the current byte
-                                    self.curr_byte += 1usize;
-                                }
-                                return None
-                            },
-                            false => { // We just have to slide everything
-                                // Recover first byte
-                                let f_byte = self.search_buffer.pop_front().unwrap();
-
-                                // Slide from look ahead to search
-                                self.search_buffer.push_back(self.look_ahead_buffer.pop_front().unwrap());
-
-                                // We need to check that there is a next byte
-                                if self.curr_byte+1usize < self.on.len(){
-                                    // Slide from data to the look ahead
-                                    self.look_ahead_buffer.push_back(*(self.on.get(self.curr_byte+1usize).unwrap()));
-                                    // Update the current byte
-                                    self.curr_byte += 1usize;
-                                }
-                                return Some(f_byte)
-                            }
-                        }
-                    },
-                    false => {
-                        panic!("Look Ahead Buffer not initialized properly !!!!");
-                    }
-                }
             }
         }
     }
@@ -141,6 +143,14 @@ impl SlidingWindow {
             self.slide(); // We'll just throw away the values returned by slide because this function will be called for token injection
         }
         Ok(())
+    }
+
+    pub fn build_token(&self) -> Token{
+        panic!("Not implemented yet !");
+    }
+
+    pub fn decide(&self, token_size : usize, original_chunk_size : usize) -> Decision{
+        panic!("Not implemented yet !");
     }
 }
 
