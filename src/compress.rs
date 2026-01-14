@@ -23,6 +23,14 @@ impl Token {
     pub fn get_size(&self) -> usize{
         self.size
     }
+
+    pub fn get_offset(&self) -> usize{
+        self.offset
+    }
+
+    pub fn get_length(&self) -> usize{
+        self.length
+    }
 }
 
 struct SlidingWindow {
