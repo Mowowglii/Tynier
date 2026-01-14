@@ -127,6 +127,13 @@ impl SlidingWindow {
             }
         }
     }
+
+    pub fn jmp(&mut self, by : usize) -> Result<()>{
+        for j in 0..by {
+            self.slide(); // We'll just throw away the values returned by slide because this function will be called for token injection
+        }
+        Ok(())
+    }
 }
 
 #[cfg(test)]
