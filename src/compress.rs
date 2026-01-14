@@ -27,40 +27,94 @@ impl Token {
 
 struct SlidingWindow {
     search_buffer : VecDeque<u8>,
-    look_ahead_buffer : VecDeque<u8>
+    look_ahead_buffer : VecDeque<u8>,
+    on : Box<Vec<u8>>,
+    curr_byte : usize
 }
 
 impl SlidingWindow {
-    pub fn new(max_capacity : usize) -> Self {
-        let capa = if max_capacity % 2 == 1 {
-            (max_capacity-1usize)/2usize
+    pub fn new(max_capacity : usize, buffer : Box<Vec<u8>>) -> Self {
+        if max_capacity % 2 == 1 {
+            SlidingWindow {
+                search_buffer: VecDeque::with_capacity(((max_capacity-1usize)/2usize)+1usize),
+                look_ahead_buffer: VecDeque::with_capacity((max_capacity-1usize)/2usize),
+                on : buffer,
+                curr_byte : 0usize
+            }
         } else {
-            max_capacity/2usize
-        };
-        SlidingWindow {
-            search_buffer: VecDeque::with_capacity(capa+1usize),
-            look_ahead_buffer: VecDeque::with_capacity(capa)
+            SlidingWindow {
+                search_buffer: VecDeque::with_capacity(max_capacity/2usize),
+                look_ahead_buffer: VecDeque::with_capacity(max_capacity/2usize),
+                on : buffer,
+                curr_byte : 0usize
+            }
         }
     }
 
-    pub fn slide(&mut self, next_byte : &u8) -> Result<()> {
-        // We are checking if the look_ahead_buffer is empty
-        if self.look_ahead_buffer.is_empty() {
-            self.look_ahead_buffer.push_back(*next_byte);
-            return Ok(())
+    pub fn slide(&mut self) -> Option<u8> {
+        match self.curr_byte == self.on.len() - 1usize { // Did we already seen all data ?
+            true => {
+                match self.look_ahead_buffer.is_empty() {
+                    true => {
+                        if !(self.search_buffer.is_empty()){ // search buffer is not empty
+                            return Some(self.search_buffer.pop_front().unwrap()) // So we emptying it...
+                        } else {
+                            return None // ... Already empty
+                        }
+                    },
+                    false => { // In this case, because of the way we implemented the sliding window :
+                        // It is impossible that the data buffer and the search buffer are empty but the look ahead buffer is not.
+                        let f_byte = self.search_buffer.pop_front().unwrap();
+
+                        // We slide value from look ahead to search
+                        self.search_buffer.push_back(self.look_ahead_buffer.pop_front().unwrap());
+
+                        // then we return the first byte that entered the sliding window
+                        return Some(f_byte)
+                    }
+                }
+            },
+            false => {
+                match self.look_ahead_buffer.len() == self.look_ahead_buffer.capacity() { // the Sliding Window must be initialized properly
+                    true => {
+                        match self.search_buffer.len() < self.search_buffer.capacity() { // The search buffer is not full 
+                            true => { // We have to fill the search buffer before
+                                // We slide value from look_ahead to search
+                                self.search_buffer.push_back(self.look_ahead_buffer.pop_front().unwrap());
+
+                                // We need to check that there is a next byte
+                                if self.curr_byte+1usize < self.on.len(){
+                                    // Slide from data to the look ahead
+                                    self.look_ahead_buffer.push_back(*(self.on.get(self.curr_byte+1usize).unwrap()));
+                                    // Update the current byte
+                                    self.curr_byte += 1usize;
+                                }
+                                return None
+                            },
+                            false => { // We just have to slide everything
+                                // Recover first byte
+                                let f_byte = self.search_buffer.pop_front().unwrap();
+
+                                // Slide from look ahead to search
+                                self.search_buffer.push_back(self.look_ahead_buffer.pop_front().unwrap());
+
+                                // We need to check that there is a next byte
+                                if self.curr_byte+1usize < self.on.len(){
+                                    // Slide from data to the look ahead
+                                    self.look_ahead_buffer.push_back(*(self.on.get(self.curr_byte+1usize).unwrap()));
+                                    // Update the current byte
+                                    self.curr_byte += 1usize;
+                                }
+                                return Some(f_byte)
+                            }
+                        }
+                    },
+                    false => {
+                        panic!("Look Ahead Buffer not initialized properly !!!!");
+                    }
+                }
+            }
         }
-
-        // We are checking if the search buffer is full
-        if self.search_buffer.len() == self.search_buffer.capacity() {
-            self.search_buffer.pop_front(); // We'll just throw it away
-        }
-
-        // Slide the first byte from look_ahead_buffer to the search_buffer
-        self.search_buffer.push_back(self.look_ahead_buffer.pop_front().unwrap());
-
-        // Add the next byte to look_ahead_buffer
-        self.look_ahead_buffer.push_back(*next_byte);
-        Ok(())
     }
 }
 
