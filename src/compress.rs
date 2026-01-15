@@ -139,17 +139,29 @@ impl SlidingWindow {
     }
 
     pub fn jmp(&mut self, by : usize) -> Result<()>{
-        for j in 0..by {
+        for _ in 0..by {
             self.slide(); // We'll just throw away the values returned by slide because this function will be called for token injection
         }
         Ok(())
     }
 
-    pub fn build_token(&self) -> Token{
-        panic!("Not implemented yet !");
+    fn get_offset_len(search_chunk : VecDeque<u8>, data_chunk : VecDeque<u8>) -> (usize,usize){
+        panic!("Not implemented yet !")
     }
 
-    pub fn decide(&self, token_size : usize, original_chunk_size : usize) -> Decision{
+    pub fn build_token(&self) -> Token{
+        panic!("Not implemented yet !");
+        if self.search_buffer.len() == 0 {
+            return Token::new(0usize, 0usize)
+        }
+
+        if self.look_ahead_buffer.len() == 0{
+            return Token::new(0usize, 0usize)
+        }
+        Token::new(0usize, 0usize)
+    }
+
+    pub fn decide(&self, token : Token) -> Decision{
         panic!("Not implemented yet !");
     }
 }
