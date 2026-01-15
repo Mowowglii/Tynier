@@ -146,8 +146,34 @@ impl SlidingWindow {
         Ok(())
     }
 
-    fn get_offset_len(search_chunk : &VecDeque<u8>, la_chunk : &VecDeque<u8>) -> (usize,usize){
-        panic!("Not implemented yet !")
+    fn max(one : (usize, usize), other : (usize, usize)) -> (usize, usize){
+        if one.1 > other.1 {
+            return one
+        } else {
+            return other
+        }
+    }
+
+    fn get_offset_len(search_chunk : &VecDeque<u8>, la_chunk : &VecDeque<u8>, i : usize, j : usize, mut i_candidate : usize, mut total_match : usize) -> (usize,usize){
+        if i >= search_chunk.len() || j >= la_chunk.len(){
+            // Convert i_candidate to the relative position
+            let index = search_chunk.len() - i_candidate;
+            return (index , total_match)
+        }
+
+        if search_chunk[i] == la_chunk[j] && total_match == 0{
+            i_candidate = i;
+            total_match += 1;
+            return SlidingWindow::get_offset_len(search_chunk, la_chunk, i+1, j+1, i_candidate, total_match)
+        }
+
+        if search_chunk[i] == la_chunk[j]{
+            return SlidingWindow::get_offset_len(search_chunk, la_chunk, i+1, j+1, i_candidate, total_match+1)
+        } else {
+            // Convert i_candidate to the relative position
+            let index = search_chunk.len() - i_candidate;
+            return SlidingWindow::max((index, total_match), SlidingWindow::get_offset_len(search_chunk, la_chunk, i+1, 0, i_candidate, 0))
+        }
     }
 
     pub fn build_token(&self) -> Token{
@@ -170,4 +196,12 @@ impl SlidingWindow {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn get_offset_test(){
+        let first = VecDeque::from([1u8, 2, 3, 4, 5, 6, 7, 8]);
+        let seconds = VecDeque::from([4, 5, 6, 8, 7]);
+        let result = SlidingWindow::get_offset_len(&first, &seconds, 0, 0, 0, 0);
+        assert_eq!(result, (5, 3))
+    }
 }
