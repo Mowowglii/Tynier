@@ -145,7 +145,7 @@ impl SlidingWindow {
         Ok(())
     }
 
-    fn get_offset_len(search_chunk : VecDeque<u8>, data_chunk : VecDeque<u8>) -> (usize,usize){
+    fn get_offset_len(search_chunk : &VecDeque<u8>, la_chunk : &VecDeque<u8>) -> (usize,usize){
         panic!("Not implemented yet !")
     }
 
