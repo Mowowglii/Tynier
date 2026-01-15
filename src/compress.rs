@@ -66,8 +66,8 @@ impl SlidingWindow {
     }
 
     pub fn init(&mut self) -> Result<()>{
-         // While data is not entirely seen and look ahead buffer is not entirely full
-        while self.curr_byte <= self.on.len() - 1usize && self.curr_byte <= self.look_ahead_buffer.capacity() - 1usize {
+         // While there is data in self.on and look ahead buffer is not entirely full
+        while self.curr_byte+1usize < self.on.len() && self.look_ahead_buffer.len() < self.look_ahead_buffer.capacity() {
             // Slide from data to look_ahead
             self.look_ahead_buffer.push_back(*(self.on.get(self.curr_byte).unwrap()));
             // Update the curr_byte
