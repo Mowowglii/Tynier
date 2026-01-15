@@ -82,30 +82,37 @@ impl SlidingWindow {
                 match self.look_ahead_buffer.len() == self.look_ahead_buffer.capacity() { // the Sliding Window must be initialized properly
                     true => {
                         match self.search_buffer.len() < self.search_buffer.capacity() { // The search buffer is not full 
-                            true => { // We have to fill the search buffer before
+                            true => { // We could just return the value that quit the look ahead buffer
+                                // We recover the value from look ahead buffer
+                                let byte = &(self.look_ahead_buffer.pop_front().unwrap());
+
                                 // We slide value from look_ahead to search
-                                self.search_buffer.push_back(self.look_ahead_buffer.pop_front().unwrap());
+                                self.search_buffer.push_back(*byte);
 
                                 // Slide from data to the look ahead
                                 self.look_ahead_buffer.push_back(*(self.on.get(self.curr_byte+1usize).unwrap()));
+                                
                                 // Update the current byte
                                 self.curr_byte += 1usize;
                             
-                                return None
+                                Some(*byte)
                             },
                             false => { // We just have to slide everything
-                                // Recover first byte
-                                let f_byte = self.search_buffer.pop_front().unwrap();
+                                // Recover byte from look ahead buffer
+                                let byte = &(self.look_ahead_buffer.pop_front().unwrap());
+
+                                self.search_buffer.pop_front().unwrap(); // We can throw away the byte from the search buffer
 
                                 // Slide from look ahead to search
-                                self.search_buffer.push_back(self.look_ahead_buffer.pop_front().unwrap());
+                                self.search_buffer.push_back(*byte);
 
                                 // Slide from data to the look ahead
                                 self.look_ahead_buffer.push_back(*(self.on.get(self.curr_byte+1usize).unwrap()));
+                                
                                 // Update the current byte
                                 self.curr_byte += 1usize;
                             
-                                return Some(f_byte)
+                                Some(*byte)
                             }
                         }
                     },
@@ -115,24 +122,18 @@ impl SlidingWindow {
                 }
             },
             false => {
-                match self.look_ahead_buffer.is_empty() {
-                    true => {
-                        if !(self.search_buffer.is_empty()){ // search buffer is not empty
-                            return Some(self.search_buffer.pop_front().unwrap()) // So we emptying it...
-                        } else {
-                            return None // ... Already empty
-                        }
-                    },
-                    false => { // In this case, because of the way we implemented the sliding window :
-                        // It is impossible that the data buffer and the search buffer are empty but the look ahead buffer is not.
-                        let f_byte = self.search_buffer.pop_front().unwrap();
+                if !(self.look_ahead_buffer.is_empty()){    
+                    // We just have to slide the window without filling the look ahead buffer
+                    let byte = &(self.look_ahead_buffer.pop_front().unwrap());
+                    
+                    // Throw byte from search buffer
+                    self.search_buffer.pop_front();
 
-                        // We slide value from look ahead to search
-                        self.search_buffer.push_back(self.look_ahead_buffer.pop_front().unwrap());
+                    self.search_buffer.push_back(*byte); // slide from look ahead to search
 
-                        // then we return the first byte that entered the sliding window
-                        return Some(f_byte)
-                    }
+                    Some(*byte)
+                } else {
+                    None
                 }
             }
         }
