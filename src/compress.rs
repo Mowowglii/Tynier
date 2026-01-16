@@ -161,13 +161,13 @@ impl SlidingWindow {
             return (index , total_match)
         }
 
-        if search_chunk[i] == la_chunk[j] && total_match == 0{
+        if search_chunk.get(i) == la_chunk.get(j) && total_match == 0{
             i_candidate = i;
             total_match += 1;
             return SlidingWindow::get_offset_len(search_chunk, la_chunk, i+1, j+1, i_candidate, total_match)
         }
 
-        if search_chunk[i] == la_chunk[j]{
+        if search_chunk.get(i) == la_chunk.get(j){
             return SlidingWindow::get_offset_len(search_chunk, la_chunk, i+1, j+1, i_candidate, total_match+1)
         } else {
             // Convert i_candidate to the relative position
@@ -198,7 +198,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn get_offset_test(){
+    fn get_ol_test(){
         let first = VecDeque::from([1u8, 2, 3, 4, 5, 6, 7, 8]);
         let seconds = VecDeque::from([4, 5, 6, 8, 7]);
         let result = SlidingWindow::get_offset_len(&first, &seconds, 0, 0, 0, 0);
