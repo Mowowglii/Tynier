@@ -15,14 +15,14 @@ struct Token {
 }
 
 impl Token {
-    pub fn new(offset_value : usize, length_value : usize) -> Self{
+    pub fn new(offset_len_tuple : (usize, usize)) -> Self{
         Token {
             delim: -1i8,
-            offset : offset_value,
-            length : length_value,
+            offset : offset_len_tuple.0,
+            length : offset_len_tuple.1,
             sep: -2i8,
             // Size of a token is the sizes of : the two delimiters + one separator + offset + length
-            size: size_of_val(&offset_value) + size_of_val(&length_value) + 2*size_of_val(&-1i8) + size_of_val(&-2i8)
+            size: size_of_val(&offset_len_tuple) + size_of_val(&offset_len_tuple) + 2*size_of_val(&-1i8) + size_of_val(&-2i8)
         }
     }
 
@@ -177,15 +177,16 @@ impl SlidingWindow {
     }
 
     pub fn build_token(&self) -> Token{
-        panic!("Not implemented yet !");
-        if self.search_buffer.len() == 0 {
-            return Token::new(0usize, 0usize)
+        // If one of the analysis buffers is empty, we just return a (0,0) token
+        if self.search_buffer.len() == 0 { 
+            return Token::new((0usize, 0usize))
         }
 
         if self.look_ahead_buffer.len() == 0{
-            return Token::new(0usize, 0usize)
+            return Token::new((0usize, 0usize))
         }
-        Token::new(0usize, 0usize)
+        // In other case we calculate the token for the current state of both analysis buffer
+        Token::new(SlidingWindow::get_offset_len(&self.search_buffer, &self.look_ahead_buffer, 0usize, 0usize, 0usize, 0usize))
     }
 
     pub fn decide(&self, token : Token) -> Decision{
