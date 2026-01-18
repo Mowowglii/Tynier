@@ -6,24 +6,58 @@ enum Decision{
     KeepChunkf
 }
 
-struct Token {
-    delim : i8,
+struct Token{
+    data : VecDeque<u8>,
     offset : usize,
-    length : usize,
-    sep : i8,
+    replacement_length : usize,
     size : usize
 }
 
-impl Token {
+impl Token{
     pub fn new(offset_len_tuple : (usize, usize)) -> Self{
-        Token {
-            delim: -1i8,
-            offset : offset_len_tuple.0,
-            length : offset_len_tuple.1,
-            sep: -2i8,
-            // Size of a token is the sizes of : the two delimiters + one separator + offset + length
-            size: size_of_val(&offset_len_tuple) + size_of_val(&offset_len_tuple) + 2*size_of_val(&-1i8) + size_of_val(&-2i8)
+    // Encode the Token
+        let mut d : VecDeque<u8> = VecDeque::new();
+        // Encode delimiter (open)
+        for del1 in "::".as_bytes(){
+            d.push_back(*del1);
         }
+        // Encode offset
+        for i in 0..(offset_len_tuple.0/255usize)+1usize{
+            if (i == offset_len_tuple.0/255usize){
+                d.push_back((offset_len_tuple.0%255usize) as u8);
+            } else {
+                d.push_back(255u8);
+            }
+        }
+        // Encode separator
+        for sep in ";;".as_bytes(){
+            d.push_back(*sep);
+        }
+        // Encode the length
+        for j in 0..(offset_len_tuple.1/255usize)+1usize{
+            if (j == offset_len_tuple.1/255usize){
+                d.push_back((offset_len_tuple.1%255usize) as u8);
+            } else {
+                d.push_back(255u8);
+            }
+        }
+        // Encode delimiter (close)
+        for del2 in "::".as_bytes(){
+            d.push_back(*del2);
+        }
+        // Save data length
+        let s : usize = d.len();
+
+        Token {
+            data: d,
+            offset: offset_len_tuple.0,
+            replacement_length: offset_len_tuple.1,
+            size: s
+        }
+    }
+
+    pub fn get_datas(&self) -> &VecDeque<u8>{
+        &self.data
     }
 
     pub fn get_size(&self) -> usize{
@@ -34,8 +68,8 @@ impl Token {
         self.offset
     }
 
-    pub fn get_length(&self) -> usize{
-        self.length
+    pub fn get_rep_length(&self) -> usize{
+        self.replacement_length
     }
 }
 
@@ -190,8 +224,12 @@ impl SlidingWindow {
     }
 
     pub fn decide(&self, token : Token) -> Decision{
-        panic!("Not implemented yet !");
+        match token.get_size() < token.get_rep_length() {
+            true => Decision::TakeToken(token),
+            false => Decision::KeepChunkf
+        }
     }
+
 }
 
 #[cfg(test)]
