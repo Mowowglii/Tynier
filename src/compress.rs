@@ -1,5 +1,6 @@
 use anyhow::Result;
 use std::collections::VecDeque;
+use std::path::PathBuf;
 
 enum Decision{
     TakeToken(Token),
@@ -228,6 +229,9 @@ impl SlidingWindow {
         }
     }
 
+    pub fn compress(&self, output : PathBuf) -> Result<()>{
+        panic!("Not implemented yet !");
+    }
 }
 
 #[cfg(test)]
