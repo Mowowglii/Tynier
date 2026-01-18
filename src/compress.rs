@@ -104,8 +104,6 @@ impl SlidingWindow {
         while self.curr_byte+1usize < self.on.len() && self.look_ahead_buffer.len() < self.look_ahead_buffer.capacity() {
             // Slide from data to look_ahead
             self.look_ahead_buffer.push_back(*(self.on.get(self.curr_byte).unwrap()));
-            // Update the curr_byte
-            self.curr_byte += 1;
         }
         Ok(())
     }
