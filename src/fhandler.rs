@@ -1,6 +1,7 @@
 use anyhow::Result;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::fs::File;
 
 pub fn get_file_data(p:&Path, buffer : &mut Box<Vec<u8>>) -> Result<()>{
     // Recover the mutable buffer content
@@ -9,6 +10,16 @@ pub fn get_file_data(p:&Path, buffer : &mut Box<Vec<u8>>) -> Result<()>{
         vec_ptr.push(byte);
     }
     Ok(())
+}
+
+pub fn generate_output(p : &Path) -> Result<File>{
+    // Modify the path to create the output file
+    // Set the path to the new file
+    let mut path_to_file = p.to_path_buf();
+    path_to_file.set_extension("lzss");
+    // We have to create the output file with lzss extension
+    let output = std::fs::File::create(path_to_file)?;
+    Ok(output)
 }
 
 #[cfg(test)]
@@ -22,6 +33,14 @@ mod tests {
         let mut f = Builder::new().prefix(name).suffix(".ran").tempfile().unwrap();
         write!(f,"{}", content).unwrap();
         f
+    }
+
+    #[test]
+    fn test_generate_output(){
+        let output = generate_output(Path::new("test.txt"));
+        assert_eq!(output.is_ok(), true);
+        let file = output.unwrap();
+        let metadata = file.metadata().unwrap();
     }
 
     #[test]
