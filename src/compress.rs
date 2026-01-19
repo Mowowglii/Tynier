@@ -1,5 +1,6 @@
 use anyhow::Result;
 use std::collections::VecDeque;
+use std::io::Write;
 use std::path::PathBuf;
 use std::fs::File;
 
@@ -9,7 +10,7 @@ enum Decision{
 }
 
 struct Token{
-    data : VecDeque<u8>,
+    data : Vec<u8>,
     offset : usize,
     replacement_length : usize,
     size : usize
@@ -20,7 +21,7 @@ impl Token{
     // Encode the Token
         let mut d : VecDeque<u8> = VecDeque::new();
         // Encode delimiter (open)
-        for del1 in "::".as_bytes(){
+        for del1 in ":".as_bytes(){
             d.push_back(*del1);
         }
         // Encode offset
@@ -32,7 +33,7 @@ impl Token{
             }
         }
         // Encode separator
-        for sep in ";;".as_bytes(){
+        for sep in ";".as_bytes(){
             d.push_back(*sep);
         }
         // Encode the length
@@ -44,22 +45,26 @@ impl Token{
             }
         }
         // Encode delimiter (close)
-        for del2 in "::".as_bytes(){
+        for del2 in ":".as_bytes(){
             d.push_back(*del2);
         }
+
+        // Change data to get a Vec<u8>
+        let final_d: Vec<u8> = d.into_iter().collect();
+
         // Save data length
-        let s : usize = d.len();
+        let s : usize = final_d.len();
 
         Token {
-            data: d,
+            data: final_d,
             offset: offset_len_tuple.0,
             replacement_length: offset_len_tuple.1,
             size: s
         }
     }
 
-    pub fn get_datas(&self) -> &VecDeque<u8>{
-        &self.data
+    pub fn get_datas(&self) -> &[u8]{
+        self.data.as_slice()
     }
 
     pub fn get_size(&self) -> usize{
@@ -83,18 +88,18 @@ struct SlidingWindow {
 }
 
 impl SlidingWindow {
-    pub fn new(max_capacity : usize, buffer : Box<Vec<u8>>) -> Self {
-        if max_capacity % 2 == 1 {
+    pub fn new(capacity : usize, buffer : Box<Vec<u8>>) -> Self {
+        if capacity % 2 == 1 {
             SlidingWindow {
-                search_buffer: VecDeque::with_capacity(((max_capacity-1usize)/2usize)+1usize),
-                look_ahead_buffer: VecDeque::with_capacity((max_capacity-1usize)/2usize),
+                search_buffer: VecDeque::with_capacity(((capacity-1usize)/2usize)+1usize),
+                look_ahead_buffer: VecDeque::with_capacity((capacity-1usize)/2usize),
                 on : buffer,
                 curr_byte : 0usize
             }
         } else {
             SlidingWindow {
-                search_buffer: VecDeque::with_capacity(max_capacity/2usize),
-                look_ahead_buffer: VecDeque::with_capacity(max_capacity/2usize),
+                search_buffer: VecDeque::with_capacity(capacity/2usize),
+                look_ahead_buffer: VecDeque::with_capacity(capacity/2usize),
                 on : buffer,
                 curr_byte : 0usize
             }
@@ -103,9 +108,10 @@ impl SlidingWindow {
 
     pub fn init(&mut self) -> Result<()>{
          // While there is data in self.on and look ahead buffer is not entirely full
-        while self.curr_byte+1usize < self.on.len() && self.look_ahead_buffer.len() < self.look_ahead_buffer.capacity() {
+        while self.curr_byte < self.on.len() && self.look_ahead_buffer.len() < self.look_ahead_buffer.capacity() {
             // Slide from data to look_ahead
             self.look_ahead_buffer.push_back(*(self.on.get(self.curr_byte).unwrap()));
+            self.curr_byte+=1;
         }
         Ok(())
     }
@@ -230,14 +236,80 @@ impl SlidingWindow {
         }
     }
 
-    pub fn compress(&self, f : File) -> Result<()>{ // f is a file that is opened in write only mode
-        panic!("Not implemented yet !");
+    pub fn is_empty(&self) -> bool {
+        self.look_ahead_buffer.is_empty()
+    }
+
+    pub fn compress(& mut self, mut file : &File) -> Result<()>{ // f is a file that is opened in write only mode
+        // We init the SlidingWindow
+        self.init()?;
+        // We init the variable that will recover values from the file
+        let mut byte :u8;
+        while !(self.is_empty()) { // Doesn't stop while the look ahead buffer is not empty 
+            // We construct the token for the current state of both queues
+            let token = self.build_token();
+            // We decide...
+            match self.decide(token) {
+                Decision::TakeToken(t) => {
+                    // We write the token found into the file
+                    file.write_all(t.get_datas())?;
+                    // We jump slide by the length of the data replaced
+                    self.jmp(t.get_rep_length())?;
+                },
+                Decision::KeepChunkf => {
+                    // We slide the window and we recover the byte from the file
+                    byte = self.slide().unwrap();
+                    // We can write that byte in the file
+                    file.write(&[byte])?;
+                }
+            }
+        }
+        Ok(())
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tempfile::Builder;
+    use std::{fs, io::{Read, Write}, usize};
+    use crate::fhandler::{get_file_data, generate_output};
+
+    //Helper
+    fn create_tmp_file(name : &str, content : &str) -> tempfile::NamedTempFile{
+        let mut f = Builder::new().prefix(name).suffix(".ran").tempfile().unwrap();
+        write!(f,"{}", content).unwrap();
+        f
+    }
+
+    #[test]
+    fn test_compress(){
+        // Create a temporary file
+        let binding = create_tmp_file("compress_test", 
+        "I AM SAM. I AM SAM. SAM I AM.\nTHAT SAM-I-AM! THAT SAM-I-AM!\n I DO NOT LIKE THAT SAM-I-AM!\nDO WOULD YOU LIKE GREEN EGGS AND HAM?\nI DO NOT LIKE THEM,SAM-I-AM.\nI DO NOT LIKE GREEN EGGS AND HAM."
+        );
+        let path = binding.path();
+        let mut content : Box<Vec<u8>> = Box::new(Vec::new());
+        // Recover file datas
+        let res1 = get_file_data(path, &mut content);
+        assert_eq!(res1.is_ok(), true); // Make sure we recovered correctly the file data
+        
+        let base_size = content.len() as u64; // Save the size of the file before compression
+        
+        // We create the SlidingWindow 
+        let mut sw = SlidingWindow::new(20, content);
+        
+        // We generate the output file
+        let res2 = generate_output(path); // We generate the output
+        assert_eq!(res2.is_ok(), true); // Make sure we could generate the output file
+        
+        // Compressing part
+        let file = res2.unwrap(); // recover the file
+        let final_res = sw.compress(&file); // Compress the file
+        assert_eq!(final_res.is_ok(), true); // Make sure the compression didn't failed
+        // Recover size of the file after compression
+        assert_eq!(base_size >= file.metadata().unwrap().len(), true);
+    }
 
     #[test]
     fn get_ol_test(){
