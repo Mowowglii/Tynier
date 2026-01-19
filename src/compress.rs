@@ -1,6 +1,7 @@
 use anyhow::Result;
 use std::collections::VecDeque;
 use std::path::PathBuf;
+use std::fs::File;
 
 enum Decision{
     TakeToken(Token),
@@ -229,7 +230,7 @@ impl SlidingWindow {
         }
     }
 
-    pub fn compress(&self, output : PathBuf) -> Result<()>{
+    pub fn compress(&self, f : File) -> Result<()>{ // f is a file that is opened in write only mode
         panic!("Not implemented yet !");
     }
 }
