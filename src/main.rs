@@ -1,6 +1,6 @@
 mod compress;
-mod fhandler;
 mod decompress;
+mod fhandler;
 
 fn main() {
     println!("Hello, world!");
