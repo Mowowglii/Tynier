@@ -1,7 +1,7 @@
 use anyhow::Result;
 use std::fs;
 use std::fs::File;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 pub fn get_file_data(p: &Path, buffer: &mut Box<Vec<u8>>) -> Result<()> {
     // Recover the mutable buffer content
