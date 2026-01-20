@@ -88,17 +88,17 @@ struct SlidingWindow {
 
 impl SlidingWindow {
     pub fn new(capacity: usize, buffer: Box<Vec<u8>>) -> Self {
-        if capacity % 2 == 1 {
+        if capacity % 4 == 0 {
             SlidingWindow {
-                search_buffer: VecDeque::with_capacity(((capacity - 1usize) / 2usize) + 1usize),
-                look_ahead_buffer: VecDeque::with_capacity((capacity - 1usize) / 2usize),
+                search_buffer: VecDeque::with_capacity(capacity*3usize / 4usize),
+                look_ahead_buffer: VecDeque::with_capacity(capacity / 4usize),
                 on: buffer,
                 curr_byte: 0usize,
             }
         } else {
             SlidingWindow {
-                search_buffer: VecDeque::with_capacity(capacity / 2usize),
-                look_ahead_buffer: VecDeque::with_capacity(capacity / 2usize),
+                search_buffer: VecDeque::with_capacity(((capacity - (capacity % 4usize))*3usize / 4usize) + capacity % 4usize),
+                look_ahead_buffer: VecDeque::with_capacity((capacity - (capacity % 4usize)) / 4usize),
                 on: buffer,
                 curr_byte: 0usize,
             }
@@ -337,7 +337,7 @@ mod tests {
         // Create a temporary file
         let binding = create_tmp_file(
             "compress_test",
-            "I AM SAM. I AM SAM. SAM I AM.\nTHAT SAM-I-AM! THAT SAM-I-AM!\n I DO NOT LIKE THAT SAM-I-AM!\nDO WOULD YOU LIKE GREEN EGGS AND HAM?\nI DO NOT LIKE THEM,SAM-I-AM.\nI DO NOT LIKE GREEN EGGS AND HAM.",
+            "I AM SAM. I AM SAM. SAM I AM.\nTHAT SAM-I-AM! THAT SAM-I-AM!\nI DO NOT LIKE THAT SAM-I-AM!\nDO WOULD YOU LIKE GREEN EGGS AND HAM?\nI DO NOT LIKE THEM,SAM-I-AM.\nI DO NOT LIKE GREEN EGGS AND HAM.",
         );
         let path = binding.path();
         let mut content: Box<Vec<u8>> = Box::new(Vec::new());
@@ -348,7 +348,7 @@ mod tests {
         let base_size = content.len() as u64; // Save the size of the file before compression
 
         // We create the SlidingWindow
-        let mut sw = SlidingWindow::new(180, content);
+        let mut sw = SlidingWindow::new(175, content);
 
         // We generate the output file
         let res2 = generate_output(path); // We generate the output
