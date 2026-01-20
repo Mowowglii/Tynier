@@ -82,12 +82,12 @@ impl Token {
 struct SlidingWindow {
     search_buffer: VecDeque<u8>,
     look_ahead_buffer: VecDeque<u8>,
-    on: Box<Vec<u8>>,
+    on: Vec<u8>,
     curr_byte: usize,
 }
 
 impl SlidingWindow {
-    pub fn new(capacity: usize, buffer: Box<Vec<u8>>) -> Self {
+    pub fn new(capacity: usize, buffer: Vec<u8>) -> Self {
         if capacity % 4 == 0 {
             SlidingWindow {
                 search_buffer: VecDeque::with_capacity(capacity*3usize / 4usize),
@@ -340,10 +340,12 @@ mod tests {
             "I AM SAM. I AM SAM. SAM I AM.\nTHAT SAM-I-AM! THAT SAM-I-AM!\nI DO NOT LIKE THAT SAM-I-AM!\nDO WOULD YOU LIKE GREEN EGGS AND HAM?\nI DO NOT LIKE THEM,SAM-I-AM.\nI DO NOT LIKE GREEN EGGS AND HAM.",
         );
         let path = binding.path();
-        let mut content: Box<Vec<u8>> = Box::new(Vec::new());
+        let mut content: Vec<u8> = Vec::new();
         // Recover file datas
         let res1 = get_file_data(path, &mut content);
-        assert_eq!(res1.is_ok(), true); // Make sure we recovered correctly the file data
+        // Make sure we recovered correctly the file data
+        assert_eq!(res1.is_ok(), true);
+        assert_eq!(content.len() > 0, true);
 
         let base_size = content.len() as u64; // Save the size of the file before compression
 

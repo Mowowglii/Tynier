@@ -3,11 +3,10 @@ use std::fs;
 use std::fs::File;
 use std::path::Path;
 
-pub fn get_file_data(p: &Path, buffer: &mut Box<Vec<u8>>) -> Result<()> {
-    // Recover the mutable buffer content
-    let vec_ptr = Box::as_mut(buffer);
+pub fn get_file_data(p: &Path, buffer: &mut Vec<u8>) -> Result<()> {
+    // Fill the buffer with file datas
     for byte in fs::read(p)? {
-        vec_ptr.push(byte);
+        buffer.push(byte);
     }
     Ok(())
 }
@@ -43,8 +42,6 @@ mod tests {
     fn test_generate_output() {
         let output = generate_output(Path::new("test.txt"));
         assert_eq!(output.is_ok(), true);
-        let file = output.unwrap();
-        let metadata = file.metadata().unwrap();
     }
 
     #[test]
