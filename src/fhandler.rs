@@ -11,14 +11,37 @@ pub fn get_file_data(p: &Path, buffer: &mut Vec<u8>) -> Result<()> {
     Ok(())
 }
 
-pub fn generate_output(p: &Path) -> Result<File> {
+pub fn generate_output(p: &Path, decomp : bool) -> Result<Option<(File, String)>> {
     // Modify the path to create the output file
-    // Set the path to the new file
+    // Recover path buffer from p
     let mut path_to_file = p.to_path_buf();
-    path_to_file.set_extension("lzss");
-    // We have to create the output file with lzss extension
-    let output = std::fs::File::create(path_to_file)?;
-    Ok(output)
+    // Set flags
+    let p_is_file = path_to_file.is_file();
+    let p_is_compressed = path_to_file.extension().unwrap().to_str().unwrap() == "lzss";
+    
+    if p_is_file {
+        if decomp { // if we want to decompress the file
+            if p_is_compressed {
+                let output = std::fs::File::create(path_to_file)?;
+                Ok(Some((output, "".to_string())))
+            } else {
+                Ok(None)
+            }
+        } else { // if we want to compress the file
+            if !p_is_compressed {
+                // We have to recover the original file extension
+                let extension = String::from(path_to_file.extension().unwrap().to_str().unwrap());
+                // We have to create the output file with lzss extension
+                path_to_file.set_extension("lzss");
+                let output = std::fs::File::create(path_to_file)?;
+                Ok(Some((output, extension)))
+            } else {
+                Ok(None)
+            }
+        }
+    } else {
+        Ok(None)
+    }
 }
 
 #[cfg(test)]
@@ -40,8 +63,10 @@ mod tests {
 
     #[test]
     fn test_generate_output() {
-        let output = generate_output(Path::new("test.txt"));
-        assert_eq!(output.is_ok(), true);
+        let res1 = generate_output(Path::new("test.txt"), false);
+        assert_eq!(res1.is_ok(), true);
+        let res2 = res1.unwrap();
+        assert_eq!(res2.is_some(), true);
     }
 
     #[test]
