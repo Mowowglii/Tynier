@@ -20,9 +20,7 @@ impl Token {
         // Encode the Token
         let mut d: VecDeque<u8> = VecDeque::new();
         // Encode delimiter (open)
-        for del1 in "<".as_bytes() {
-            d.push_back(*del1);
-        }
+        d.push_back(60u8); // push "<"
         // Encode offset
         let add_one_offset = if offset_len_tuple.0 % 255 == 0 {
             0usize
@@ -54,9 +52,7 @@ impl Token {
             }
         }
         // Encode delimiter (close)
-        for del2 in ">".as_bytes() {
-            d.push_back(*del2);
-        }
+        d.push_back(62u8); // push ">"
 
         // Change data to get a Vec<u8>
         let final_d: Vec<u8> = d.into_iter().collect();
