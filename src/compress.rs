@@ -280,8 +280,11 @@ impl SlidingWindow {
         self.look_ahead_buffer.is_empty()
     }
 
-    pub fn compress(&mut self, mut file: &File) -> Result<()> {
+    pub fn compress(&mut self, mut file: &File, extension : String) -> Result<()> {
         // f is a file that is opened in write only mode
+        // We also need to encode the original file extension as header of the file
+        file.write_all(extension.as_bytes());
+        file.write("\n".as_bytes());
         // We init the SlidingWindow
         self.init()?;
         // We init the variable that will recover values from the file
@@ -353,12 +356,12 @@ mod tests {
         let mut sw = SlidingWindow::new(175, content);
 
         // We generate the output file
-        let res2 = generate_output(path); // We generate the output
+        let res2 = generate_output(path, false); // We generate the output
         assert_eq!(res2.is_ok(), true); // Make sure we could generate the output file
 
         // Compressing part
-        let file = res2.unwrap(); // recover the file
-        let final_res = sw.compress(&file); // Compress the file
+        let (file, ext) = res2.unwrap().unwrap(); // recover the file
+        let final_res = sw.compress(&file, ext); // Compress the file
         assert_eq!(final_res.is_ok(), true); // Make sure the compression didn't failed
         // Recover size of the file after compression
         assert_eq!(base_size >= file.metadata().unwrap().len(), true);
