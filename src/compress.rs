@@ -356,7 +356,7 @@ mod tests {
         let mut sw = SlidingWindow::new(175, content);
 
         // We generate the output file
-        let res2 = generate_output(path, false); // We generate the output
+        let res2 = generate_output(path, false, None); // We generate the output
         assert_eq!(res2.is_ok(), true); // Make sure we could generate the output file
 
         // Compressing part
