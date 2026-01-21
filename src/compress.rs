@@ -20,14 +20,19 @@ impl Token {
         // Encode the Token
         let mut d: VecDeque<u8> = VecDeque::new();
         // Encode delimiter (open)
-        for del1 in ":".as_bytes() {
+        for del1 in "<".as_bytes() {
             d.push_back(*del1);
         }
         // Encode offset
-        for i in 0..(offset_len_tuple.0 / 255usize) + 1usize {
-            if (i == offset_len_tuple.0 / 255usize) {
+        let add_one_offset = if offset_len_tuple.0 % 255 == 0 {
+            0usize
+        } else {
+            1usize
+        };
+        for i in 0..(offset_len_tuple.0 / 255usize) + add_one_offset {
+            if i == offset_len_tuple.0 / 255usize { // We enter into this statement if and only if add_one_offset = 1
                 d.push_back((offset_len_tuple.0 % 255usize) as u8);
-            } else {
+            } else { // Otherwise we just push 255
                 d.push_back(255u8);
             }
         }
@@ -36,15 +41,20 @@ impl Token {
             d.push_back(*sep);
         }
         // Encode the length
-        for j in 0..(offset_len_tuple.1 / 255usize) + 1usize {
-            if (j == offset_len_tuple.1 / 255usize) {
+        let add_one_length=  if offset_len_tuple.1%255usize == 0 {
+            0usize
+        } else {
+            1usize
+        };
+        for j in 0..(offset_len_tuple.1 / 255usize) + add_one_length { // Works the same as encode offset
+            if j == offset_len_tuple.1 / 255usize {
                 d.push_back((offset_len_tuple.1 % 255usize) as u8);
             } else {
                 d.push_back(255u8);
             }
         }
         // Encode delimiter (close)
-        for del2 in ":".as_bytes() {
+        for del2 in ">".as_bytes() {
             d.push_back(*del2);
         }
 
