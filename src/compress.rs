@@ -18,50 +18,27 @@ struct Token {
 impl Token {
     pub fn new(offset_len_tuple: (usize, usize)) -> Self {
         // Encode the Token
-        let mut d: VecDeque<u8> = VecDeque::new();
+        let mut d: Vec<u8> = Vec::new();
         // Encode delimiter (open)
-        d.push_back(60u8); // push "<"
+        d.push(60u8); // push "<"
         // Encode offset
-        let add_one_offset = if offset_len_tuple.0 % 255 == 0 {
-            0usize
-        } else {
-            1usize
-        };
-        for i in 0..(offset_len_tuple.0 / 255usize) + add_one_offset {
-            if i == offset_len_tuple.0 / 255usize { // We enter into this statement if and only if add_one_offset = 1
-                d.push_back((offset_len_tuple.0 % 255usize) as u8);
-            } else { // Otherwise we just push 255
-                d.push_back(255u8);
-            }
+        for byte1 in  offset_len_tuple.0.to_string().as_bytes(){
+            d.push(*byte1);
         }
         // Encode separator
-        for sep in ";".as_bytes() {
-            d.push_back(*sep);
-        }
+        d.push(59u8); // push ";"
         // Encode the length
-        let add_one_length=  if offset_len_tuple.1%255usize == 0 {
-            0usize
-        } else {
-            1usize
-        };
-        for j in 0..(offset_len_tuple.1 / 255usize) + add_one_length { // Works the same as encode offset
-            if j == offset_len_tuple.1 / 255usize {
-                d.push_back((offset_len_tuple.1 % 255usize) as u8);
-            } else {
-                d.push_back(255u8);
-            }
+        for byte2 in  offset_len_tuple.1.to_string().as_bytes(){
+            d.push(*byte2);
         }
         // Encode delimiter (close)
-        d.push_back(62u8); // push ">"
-
-        // Change data to get a Vec<u8>
-        let final_d: Vec<u8> = d.into_iter().collect();
+        d.push(62u8); // push ">"
 
         // Save data length
-        let s: usize = final_d.len();
+        let s: usize = d.len();
 
         Token {
-            data: final_d,
+            data: d,
             offset: offset_len_tuple.0,
             replacement_length: offset_len_tuple.1,
             size: s,
