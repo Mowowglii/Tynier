@@ -180,11 +180,7 @@ impl SlidingWindow {
     }
 
     fn max(one: (usize, usize), other: (usize, usize)) -> (usize, usize) {
-        if one.1 > other.1 {
-            one
-        } else {
-            other
-        }
+        if one.1 > other.1 { one } else { other }
     }
 
     fn get_offset_len(

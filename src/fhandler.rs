@@ -27,7 +27,8 @@ pub fn generate_output(
         if decomp {
             // if we want to decompress the file
             if p_is_compressed {
-                if let Some(ext) = og_extension { // We verify and recover the original file extension
+                if let Some(ext) = og_extension {
+                    // We verify and recover the original file extension
                     // We set output extension
                     path_to_file.set_extension(&ext);
                     //We create the output file
