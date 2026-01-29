@@ -11,16 +11,21 @@ pub fn get_file_data(p: &Path, buffer: &mut Vec<u8>) -> Result<()> {
     Ok(())
 }
 
-pub fn generate_output(p: &Path, decomp : bool, og_extension : Option<String>) -> Result<Option<(File, String)>> {
+pub fn generate_output(
+    p: &Path,
+    decomp: bool,
+    og_extension: Option<String>,
+) -> Result<Option<(File, String)>> {
     // Modify the path to create the output file
     // Recover path buffer from p
     let mut path_to_file = p.to_path_buf();
     // Set flags
     let p_is_file = path_to_file.is_file();
     let p_is_compressed = path_to_file.extension().unwrap().to_str().unwrap() == "lzss";
-    
+
     if p_is_file {
-        if decomp { // if we want to decompress the file
+        if decomp {
+            // if we want to decompress the file
             if p_is_compressed {
                 if og_extension.is_some() {
                     // We recover the original file extension
@@ -36,7 +41,8 @@ pub fn generate_output(p: &Path, decomp : bool, og_extension : Option<String>) -
             } else {
                 Ok(None)
             }
-        } else { // if we want to compress the file
+        } else {
+            // if we want to compress the file
             if !p_is_compressed {
                 // We have to recover the original file extension
                 let extension = String::from(path_to_file.extension().unwrap().to_str().unwrap());
