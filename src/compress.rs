@@ -7,7 +7,7 @@ enum Decision {
     TakeToken(Token),
     KeepChunkf,
 }
-
+#[derive(Debug)]
 struct Token {
     data: Vec<u8>,
     offset: usize,
@@ -22,13 +22,13 @@ impl Token {
         // Encode delimiter (open)
         d.push(60u8); // push "<"
         // Encode offset
-        for byte1 in  offset_len_tuple.0.to_string().as_bytes(){
+        for byte1 in offset_len_tuple.0.to_string().as_bytes() {
             d.push(*byte1);
         }
         // Encode separator
         d.push(59u8); // push ";"
         // Encode the length
-        for byte2 in  offset_len_tuple.1.to_string().as_bytes(){
+        for byte2 in offset_len_tuple.1.to_string().as_bytes() {
             d.push(*byte2);
         }
         // Encode delimiter (close)
@@ -73,15 +73,19 @@ impl SlidingWindow {
     pub fn new(capacity: usize, buffer: Vec<u8>) -> Self {
         if capacity % 4 == 0 {
             SlidingWindow {
-                search_buffer: VecDeque::with_capacity(capacity*3usize / 4usize),
+                search_buffer: VecDeque::with_capacity(capacity * 3usize / 4usize),
                 look_ahead_buffer: VecDeque::with_capacity(capacity / 4usize),
                 on: buffer,
                 curr_byte: 0usize,
             }
         } else {
             SlidingWindow {
-                search_buffer: VecDeque::with_capacity(((capacity - (capacity % 4usize))*3usize / 4usize) + capacity % 4usize),
-                look_ahead_buffer: VecDeque::with_capacity((capacity - (capacity % 4usize)) / 4usize),
+                search_buffer: VecDeque::with_capacity(
+                    ((capacity + (capacity % 4usize)) * 3usize / 4usize) + capacity % 4usize,
+                ),
+                look_ahead_buffer: VecDeque::with_capacity(
+                    (capacity + (capacity % 4usize)) / 4usize,
+                ),
                 on: buffer,
                 curr_byte: 0usize,
             }
@@ -94,15 +98,14 @@ impl SlidingWindow {
             && self.look_ahead_buffer.len() < self.look_ahead_buffer.capacity()
         {
             // Slide from data to look_ahead
-            self.look_ahead_buffer
-                .push_back(*(self.on.get(self.curr_byte).unwrap()));
+            self.look_ahead_buffer.push_back(self.on[self.curr_byte]);
             self.curr_byte += 1;
         }
         Ok(())
     }
 
     pub fn slide(&mut self) -> Option<u8> {
-        match self.curr_byte + 1usize < self.on.len() {
+        match self.curr_byte < self.on.len() {
             // Is there a next byte ?
             true => {
                 match self.look_ahead_buffer.len() == self.look_ahead_buffer.capacity() {
@@ -119,8 +122,7 @@ impl SlidingWindow {
                                 self.search_buffer.push_back(*byte);
 
                                 // Slide from data to the look ahead
-                                self.look_ahead_buffer
-                                    .push_back(*(self.on.get(self.curr_byte + 1usize).unwrap()));
+                                self.look_ahead_buffer.push_back(self.on[self.curr_byte]);
 
                                 // Update the current byte
                                 self.curr_byte += 1usize;
@@ -138,8 +140,7 @@ impl SlidingWindow {
                                 self.search_buffer.push_back(*byte);
 
                                 // Slide from data to the look ahead
-                                self.look_ahead_buffer
-                                    .push_back(*(self.on.get(self.curr_byte + 1usize).unwrap()));
+                                self.look_ahead_buffer.push_back(self.on[self.curr_byte]);
 
                                 // Update the current byte
                                 self.curr_byte += 1usize;
@@ -263,11 +264,11 @@ impl SlidingWindow {
         self.look_ahead_buffer.is_empty()
     }
 
-    pub fn compress(&mut self, mut file: &File, extension : String) -> Result<()> {
+    pub fn compress(&mut self, mut file: &File, extension: String) -> Result<()> {
         // f is a file that is opened in write only mode
         // We also need to encode the original file extension as header of the file
-        file.write_all(extension.as_bytes());
-        file.write("\n".as_bytes());
+        file.write_all(extension.as_bytes())?;
+        file.write("\n".as_bytes())?;
         // We init the SlidingWindow
         self.init()?;
         // We init the variable that will recover values from the file
@@ -300,11 +301,6 @@ impl SlidingWindow {
 mod tests {
     use super::*;
     use crate::fhandler::{generate_output, get_file_data};
-    use std::{
-        fs,
-        io::{Read, Write},
-        usize,
-    };
     use tempfile::Builder;
 
     //Helper
@@ -336,7 +332,7 @@ mod tests {
         let base_size = content.len() as u64; // Save the size of the file before compression
 
         // We create the SlidingWindow
-        let mut sw = SlidingWindow::new(175, content);
+        let mut sw = SlidingWindow::new(180, content);
 
         // We generate the output file
         let res2 = generate_output(path, false, None); // We generate the output
@@ -356,5 +352,27 @@ mod tests {
         let seconds = VecDeque::from([4, 5, 6, 8, 7]);
         let result = SlidingWindow::get_offset_len(&first, &seconds, 0, 0, 0, 0);
         assert_eq!(result, (5, 3))
+    }
+
+    #[test]
+    fn test_slide() {
+        let buff = vec![24u8, 15, 32, 34, 78, 89, 90, 245, 66, 79, 80, 32];
+        let test = vec![24, 15, 32, 34, 78, 89, 90, 245, 66, 79, 80, 32];
+        let mut sw = SlidingWindow::new(12, buff);
+        let init_rest = sw.init();
+        assert_eq!(init_rest.is_ok(), true);
+        // Normal Slide test
+        for i in 0..9 {
+            assert_eq!(sw.curr_byte, 3 + i); // Verifying if Sliding Window index is sync with file index
+            sw.slide();
+            assert_eq!(sw.look_ahead_buffer.back(), Some(&test[3 + i])); // Verifying that we push correct value in look ahead buffer
+        }
+        let mut sw2 = SlidingWindow::new(12, test);
+        let init_test = sw2.init();
+        assert_eq!(init_test.is_ok(), true);
+        // Jump test
+        let jmp_test = sw2.jmp(5);
+        assert_eq!(jmp_test.is_ok(), true);
+        assert_eq!(sw2.curr_byte, 8); // Checking that the current byte is updated correctly
     }
 }
