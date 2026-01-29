@@ -71,7 +71,7 @@ struct SlidingWindow {
 
 impl SlidingWindow {
     pub fn new(capacity: usize, buffer: Vec<u8>) -> Self {
-        if capacity % 4 == 0 {
+        if capacity.is_multiple_of(4) {
             SlidingWindow {
                 search_buffer: VecDeque::with_capacity(capacity * 3usize / 4usize),
                 look_ahead_buffer: VecDeque::with_capacity(capacity / 4usize),
@@ -181,9 +181,9 @@ impl SlidingWindow {
 
     fn max(one: (usize, usize), other: (usize, usize)) -> (usize, usize) {
         if one.1 > other.1 {
-            return one;
+            one
         } else {
-            return other;
+            other
         }
     }
 
@@ -215,31 +215,31 @@ impl SlidingWindow {
         }
 
         if search_chunk.get(i) == la_chunk.get(j) {
-            return SlidingWindow::get_offset_len(
+            SlidingWindow::get_offset_len(
                 search_chunk,
                 la_chunk,
                 i + 1,
                 j + 1,
                 i_candidate,
                 total_match + 1,
-            );
+            )
         } else {
             // Convert i_candidate to the relative position
             let index = search_chunk.len() - i_candidate;
-            return SlidingWindow::max(
+            SlidingWindow::max(
                 (index, total_match),
                 SlidingWindow::get_offset_len(search_chunk, la_chunk, i + 1, 0, i_candidate, 0),
-            );
+            )
         }
     }
 
     pub fn build_token(&self) -> Token {
         // If one of the analysis buffers is empty, we just return a (0,0) token
-        if self.search_buffer.len() == 0 {
+        if self.search_buffer.is_empty() {
             return Token::new((0usize, 0usize));
         }
 
-        if self.look_ahead_buffer.len() == 0 {
+        if self.look_ahead_buffer.is_empty() {
             return Token::new((0usize, 0usize));
         }
         // In other case we calculate the token for the current state of both analysis buffer
@@ -268,7 +268,7 @@ impl SlidingWindow {
         // f is a file that is opened in write only mode
         // We also need to encode the original file extension as header of the file
         file.write_all(extension.as_bytes())?;
-        file.write("\n".as_bytes())?;
+        file.write_all("\n".as_bytes())?;
         // We init the SlidingWindow
         self.init()?;
         // We init the variable that will recover values from the file
@@ -289,7 +289,7 @@ impl SlidingWindow {
                     // We slide the window and we recover the byte from the file
                     byte = self.slide().unwrap();
                     // We can write that byte in the file
-                    file.write(&[byte])?;
+                    file.write_all(&[byte])?;
                 }
             }
         }

@@ -1,11 +1,9 @@
-use crate::fhandler::generate_output;
+use crate::fhandler::{generate_output, get_file_data};
 use anyhow::Result;
 use core::str;
 use std::fs::File;
-use std::io::{Read, Seek, Write};
-use std::os::windows::fs::FileExt;
+use std::io::Write;
 use std::path::Path;
-use std::process::Output;
 
 struct DecompToken {
     offset: usize,
@@ -13,7 +11,7 @@ struct DecompToken {
     size: usize,
 }
 
-fn create_o(content: &Vec<u8>, p_to_f: &Path) -> Result<(File, usize)> {
+fn create_o(content: &[u8], p_to_f: &Path) -> Result<(File, usize)> {
     /// Returns the byte that has been read just for og file extension extraction and the output file
     let mut i = 0usize;
     let mut buff: Vec<u8> = Vec::new();
@@ -29,7 +27,7 @@ fn create_o(content: &Vec<u8>, p_to_f: &Path) -> Result<(File, usize)> {
     Ok((output, i + 1usize)) // Because we only need to extract everything after the "\n"
 }
 
-fn gives_token(content: &Vec<u8>) -> Option<DecompToken> {
+fn gives_token(content: &[u8]) -> Option<DecompToken> {
     // Receiving in parameter content, the bytes after the first occurance of "<"
     // Searching the end of the token and the separator position
     let mut sep_position: usize = 0usize;
@@ -37,11 +35,11 @@ fn gives_token(content: &Vec<u8>) -> Option<DecompToken> {
     let mut sep_flag = false; // We haven't encountered the separator yet
 
     while content[j] != 62u8 {
-        if content[j] == 59u8 && sep_flag == false {
+        if content[j] == 59u8 && !sep_flag {
             // We found the position of the separator
             sep_position = j;
             sep_flag = true;
-        } else if content[j] == 59u8 && sep_flag == true {
+        } else if content[j] == 59u8 && sep_flag {
             // We cannot say that the candidate is a token because it has 2 separators in it
             return None;
         }
@@ -79,7 +77,7 @@ fn extract(f_content: Vec<u8>, mut output: File, i: usize) -> Result<()> {
             output_buff.push(f_content[cursor]);
             cursor += 1;
         } else {
-            match gives_token(&f_content[cursor + 1..].to_vec()) {
+            match gives_token(&f_content[cursor + 1..]) {
                 Some(token) => {
                     let index = output_buff.len();
                     for k in 0..token.length {
@@ -101,6 +99,10 @@ fn extract(f_content: Vec<u8>, mut output: File, i: usize) -> Result<()> {
 }
 
 pub fn decomp(path_to_file: &Path) -> Result<()> {
+    let mut buf = Vec::new();
+    get_file_data(path_to_file, &mut buf)?;
+    let args = create_o(&buf, path_to_file)?;
+    extract(buf, args.0, args.1)?;
     Ok(())
 }
 
