@@ -1,32 +1,25 @@
-use clap::{Parser, Subcommand, Args};
-use std::path::Path;
+use clap::{Parser, Subcommand};
 
-#[derive(Parser)]
-#[command(version, about, long_about = None)]
-#[command(propagate_version=true)]
-pub struct Arg{
-    // Select Compress or Decompress mode
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None, propagate_version=true)]
+pub struct Cli{
+    // Compress or Decompress subcommand
     #[command(subcommand)]
-    pub command : Commands,
+    subcom : SubComs
 }
 
-#[derive(Subcommand)]
-pub enum Commands {
-    // Compress a file
-    Compress(CompArgs),
-
-    // Decompress a file
-    Decompress(DecompArgs)
+#[derive(Subcommand, Debug)]
+enum SubComs {
+    // Compress Subcommand
+    Compress {
+        path : String
+    },
+    // Decompress Subcommand
+    Decompress {
+        path : String
+    }
 }
 
-#[derive(Args)]
-pub struct CompArgs{
-    // Path to the file to compress
-    pub path : Path,
-}
-
-#[derive(Args)]
-pub struct DecompArgs{
-    // Path to the file to decompress
-    pub path : Path,
+pub fn cli_parse() -> Cli {
+    Cli::parse()
 }
