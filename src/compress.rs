@@ -10,7 +10,6 @@ enum Decision {
 #[derive(Debug)]
 struct Token {
     data: Vec<u8>,
-    offset: usize,
     replacement_length: usize,
     size: usize,
 }
@@ -39,7 +38,6 @@ impl Token {
 
         Token {
             data: d,
-            offset: offset_len_tuple.0,
             replacement_length: offset_len_tuple.1,
             size: s,
         }
@@ -51,10 +49,6 @@ impl Token {
 
     pub fn get_size(&self) -> usize {
         self.size
-    }
-
-    pub fn get_offset(&self) -> usize {
-        self.offset
     }
 
     pub fn get_rep_length(&self) -> usize {
@@ -229,7 +223,7 @@ impl SlidingWindow {
         }
     }
 
-    pub fn build_token(&self) -> Token {
+    fn build_token(&self) -> Token {
         // If one of the analysis buffers is empty, we just return a (0,0) token
         if self.search_buffer.is_empty() {
             return Token::new((0usize, 0usize));
@@ -249,7 +243,7 @@ impl SlidingWindow {
         ))
     }
 
-    pub fn decide(&self, token: Token) -> Decision {
+    fn decide(&self, token: Token) -> Decision {
         match token.get_size() < token.get_rep_length() {
             true => Decision::TakeToken(token),
             false => Decision::KeepChunkf,

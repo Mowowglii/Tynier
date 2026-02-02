@@ -12,7 +12,7 @@ struct DecompToken {
 }
 
 fn create_o(content: &[u8], p_to_f: &Path) -> Result<(File, usize)> {
-    /// Returns the byte that has been read just for og file extension extraction and the output file
+    // Returns the byte that has been read just for og file extension extraction and the output file
     let mut i = 0usize;
     let mut buff: Vec<u8> = Vec::new();
     while content[i] != "\n".as_bytes()[0] {
@@ -69,7 +69,7 @@ fn gives_token(content: &[u8]) -> Option<DecompToken> {
 }
 
 fn extract(f_content: Vec<u8>, mut output: File, i: usize) -> Result<()> {
-    /// "i" parameter is the position after og file extension extraction
+    // "i" parameter is the position after og file extension extraction
     let mut cursor = i;
     let mut output_buff: Vec<u8> = Vec::new();
     while cursor < f_content.len() {
