@@ -58,13 +58,13 @@ fn gives_token(content: &[u8]) -> Option<DecompToken> {
     }
     // Recover values and build token
     let offset: usize = String::from_utf8(content[..sep_position].to_vec())
-        .unwrap()
+        .unwrap_or_else(|_| "0".to_string())
         .parse()
-        .unwrap();
+        .unwrap_or_default();
     let length: usize = String::from_utf8(content[sep_position + 1..j].to_vec())
-        .unwrap()
+        .unwrap_or_else(|_| "0".to_string())
         .parse()
-        .unwrap();
+        .unwrap_or_default();
     Some(DecompToken::new(offset, length, j + 1)) // j+1 because it is the length of the sub-vector + the close delimiter
 }
 
@@ -79,13 +79,19 @@ fn extract(f_content: Vec<u8>, mut output: File, i: usize) -> Result<()> {
         } else {
             match gives_token(&f_content[cursor + 1..]) {
                 Some(token) => {
-                    let index = output_buff.len();
-                    for k in 0..token.length {
-                        let decalage = k % index;
-                        let v = output_buff[(index - token.offset) + decalage];
-                        output_buff.push(v);
+                    if token.length == 0 || token.offset == 0 {
+                        output_buff.push(f_content[cursor]);
+                        cursor += 1;
+                    } else {
+                        let index = output_buff.len();
+                        let start_pos = index - token.offset;
+                        for k in 0..token.length {
+                            let decalage = k % index;
+                            let v = output_buff[start_pos + decalage];
+                            output_buff.push(v);
+                        }
+                        cursor += token.size + 1;
                     }
-                    cursor += token.size + 1;
                 }
                 None => {
                     output_buff.push(f_content[cursor]);
@@ -150,7 +156,7 @@ mod test {
     #[test]
     fn test_extract() {
         // recover temp file
-        let path = Path::new("c:\\Users\\erwan\\AppData\\Local\\Temp\\compress_testjwiEqG.lzss");
+        let path = Path::new("test.lzss");
         let input = fs::read(path).unwrap();
         let param = create_o(&input, path).unwrap();
         let test = extract(input, param.0, param.1);
