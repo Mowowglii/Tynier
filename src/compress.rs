@@ -60,7 +60,7 @@ pub struct SlidingWindow {
     search_buffer: VecDeque<u8>,
     look_ahead_buffer: VecDeque<u8>,
     on: Vec<u8>,
-    curr_byte: usize,
+    next_byte: usize,
 }
 
 impl SlidingWindow {
@@ -70,7 +70,7 @@ impl SlidingWindow {
                 search_buffer: VecDeque::with_capacity(capacity * 3usize / 4usize),
                 look_ahead_buffer: VecDeque::with_capacity(capacity / 4usize),
                 on: buffer,
-                curr_byte: 0usize,
+                next_byte: 0usize,
             }
         } else {
             SlidingWindow {
@@ -81,25 +81,25 @@ impl SlidingWindow {
                     (capacity + (capacity % 4usize)) / 4usize,
                 ),
                 on: buffer,
-                curr_byte: 0usize,
+                next_byte: 0usize,
             }
         }
     }
 
     pub fn init(&mut self) -> Result<()> {
         // While there is data in self.on and look ahead buffer is not entirely full
-        while self.curr_byte < self.on.len()
+        while self.next_byte < self.on.len()
             && self.look_ahead_buffer.len() < self.look_ahead_buffer.capacity()
         {
             // Slide from data to look_ahead
-            self.look_ahead_buffer.push_back(self.on[self.curr_byte]);
-            self.curr_byte += 1;
+            self.look_ahead_buffer.push_back(self.on[self.next_byte]);
+            self.next_byte += 1;
         }
         Ok(())
     }
 
     pub fn slide(&mut self) -> Option<u8> {
-        match self.curr_byte < self.on.len() {
+        match self.next_byte < self.on.len() {
             // Is there a next byte ?
             true => {
                 match self.look_ahead_buffer.len() == self.look_ahead_buffer.capacity() {
@@ -116,10 +116,10 @@ impl SlidingWindow {
                                 self.search_buffer.push_back(*byte);
 
                                 // Slide from data to the look ahead
-                                self.look_ahead_buffer.push_back(self.on[self.curr_byte]);
+                                self.look_ahead_buffer.push_back(self.on[self.next_byte]);
 
                                 // Update the current byte
-                                self.curr_byte += 1usize;
+                                self.next_byte += 1usize;
 
                                 Some(*byte)
                             }
@@ -134,10 +134,10 @@ impl SlidingWindow {
                                 self.search_buffer.push_back(*byte);
 
                                 // Slide from data to the look ahead
-                                self.look_ahead_buffer.push_back(self.on[self.curr_byte]);
+                                self.look_ahead_buffer.push_back(self.on[self.next_byte]);
 
                                 // Update the current byte
-                                self.curr_byte += 1usize;
+                                self.next_byte += 1usize;
 
                                 Some(*byte)
                             }
@@ -353,7 +353,7 @@ mod tests {
         assert_eq!(init_rest.is_ok(), true);
         // Normal Slide test
         for i in 0..9 {
-            assert_eq!(sw.curr_byte, 3 + i); // Verifying if Sliding Window index is sync with file index
+            assert_eq!(sw.next_byte, 3 + i); // Verifying if Sliding Window index is sync with file index
             sw.slide();
             assert_eq!(sw.look_ahead_buffer.back(), Some(&test[3 + i])); // Verifying that we push correct value in look ahead buffer
         }
@@ -363,6 +363,6 @@ mod tests {
         // Jump test
         let jmp_test = sw2.jmp(5);
         assert_eq!(jmp_test.is_ok(), true);
-        assert_eq!(sw2.curr_byte, 8); // Checking that the current byte is updated correctly
+        assert_eq!(sw2.next_byte, 8); // Checking that the current byte is updated correctly
     }
 }
