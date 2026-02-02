@@ -24,13 +24,13 @@ fn main() -> Result<()> {
         } => {
             let p = Path::new(path);
             let capacity = if *large {
-                32000usize
+                44000usize // 33ko for search buffer and 11ko for look ahead buffer
             } else if *medium {
-                16000usize
+                24000usize // 18ko for search buffer and 6ko for look ahead buffer
             } else if *small {
-                8000usize
+                16000usize // 12ko for search buffer and 4ko for look ahead buffer
             } else {
-                4000usize
+                24000usize
             };
             let mut buff: Vec<u8> = Vec::new();
             get_file_data(p, &mut buff)?;
