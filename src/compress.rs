@@ -62,7 +62,7 @@ impl Token {
     }
 }
 
-struct SlidingWindow {
+pub struct SlidingWindow {
     search_buffer: VecDeque<u8>,
     look_ahead_buffer: VecDeque<u8>,
     on: Vec<u8>,
