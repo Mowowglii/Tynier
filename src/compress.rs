@@ -179,48 +179,40 @@ impl SlidingWindow {
 
     fn get_offset_len(
         search_chunk: &VecDeque<u8>,
-        la_chunk: &VecDeque<u8>,
-        i: usize,
-        j: usize,
-        mut i_candidate: usize,
-        mut total_match: usize,
+        la_chunk: &VecDeque<u8>
     ) -> (usize, usize) {
-        if i >= search_chunk.len() || j >= la_chunk.len() {
-            // Convert i_candidate to the relative position
-            let index = search_chunk.len() - i_candidate;
-            return (index, total_match);
-        }
+        let mut curr_best : (usize, usize) = (0,0);
+        
+        let mut total_match = 0usize;
+        let mut i_candidate = 0usize;
+        let mut i = 0usize;
+        let mut j = 0usize;
 
-        if search_chunk.get(i) == la_chunk.get(j) && total_match == 0 {
-            i_candidate = i;
-            total_match += 1;
-            return SlidingWindow::get_offset_len(
-                search_chunk,
-                la_chunk,
-                i + 1,
-                j + 1,
-                i_candidate,
-                total_match,
-            );
+        while i < search_chunk.len() && j < la_chunk.len() {
+            if search_chunk.get(i) == la_chunk.get(j) && total_match == 0 {
+                // Set new candidate
+                i_candidate = i;
+                // Increment total_match of this one
+                total_match += 1;
+                // Looking next value in la_chunk
+                j+=1;
+            } else if search_chunk.get(i) == la_chunk.get(j) && total_match != 0 {
+                // Increment the total match of previously candidate found
+                total_match += 1;
+                // Looking next value in la_chunk
+                j+=1;
+            } else if search_chunk.get(i) != la_chunk.get(j) {
+                // Build candidate
+                let candidate = (search_chunk.len() - i_candidate, total_match);
+                // Save the best candidate
+                curr_best = SlidingWindow::max(curr_best, candidate);
+                // Reset 
+                j = 0;
+                total_match = 0;
+            }
+            i+=1;
         }
-
-        if search_chunk.get(i) == la_chunk.get(j) {
-            SlidingWindow::get_offset_len(
-                search_chunk,
-                la_chunk,
-                i + 1,
-                j + 1,
-                i_candidate,
-                total_match + 1,
-            )
-        } else {
-            // Convert i_candidate to the relative position
-            let index = search_chunk.len() - i_candidate;
-            SlidingWindow::max(
-                (index, total_match),
-                SlidingWindow::get_offset_len(search_chunk, la_chunk, i + 1, 0, i_candidate, 0),
-            )
-        }
+        curr_best
     }
 
     fn build_token(&self) -> Token {
@@ -235,11 +227,7 @@ impl SlidingWindow {
         // In other case we calculate the token for the current state of both analysis buffer
         Token::new(SlidingWindow::get_offset_len(
             &self.search_buffer,
-            &self.look_ahead_buffer,
-            0usize,
-            0usize,
-            0usize,
-            0usize,
+            &self.look_ahead_buffer
         ))
     }
 
@@ -340,7 +328,7 @@ mod tests {
     fn get_ol_test() {
         let first = VecDeque::from([1u8, 2, 3, 4, 5, 6, 7, 8]);
         let seconds = VecDeque::from([4, 5, 6, 8, 7]);
-        let result = SlidingWindow::get_offset_len(&first, &seconds, 0, 0, 0, 0);
+        let result = SlidingWindow::get_offset_len(&first, &seconds);
         assert_eq!(result, (5, 3))
     }
 
