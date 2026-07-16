@@ -13,7 +13,7 @@ cargo build --release
 
 ## État du projet
 
-⚠️ Work in Progress — Compression fonctionnelle, décompression en cours de développement.
+⚠️ Work in Progress
 
 Apprentissages :
 
