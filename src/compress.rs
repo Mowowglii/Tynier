@@ -30,7 +30,7 @@ impl Token {
                 } else {
                     break;
                 }
-            } 
+            }
         }
         // Encode separator
         d.push(59u8); // push ";"
@@ -114,15 +114,15 @@ impl SlidingWindow {
     }
 
     pub fn slide(&mut self) -> Option<u8> {
-        // Is there a next byte ? 
+        // Is there a next byte ?
         if self.next_byte < self.on.len() {
             // Is the search buffer already full ?
-            if self.search_buffer.len() == self.search_buffer.capacity(){
-                    // Throw the latest byte from search buffer
-                    self.search_buffer.pop_front();
+            if self.search_buffer.len() == self.search_buffer.capacity() {
+                // Throw the latest byte from search buffer
+                self.search_buffer.pop_front();
             }
             // Recover next byte on look ahead buffer
-            let byte : &u8 = &(self.look_ahead_buffer.pop_front().unwrap());
+            let byte: &u8 = &(self.look_ahead_buffer.pop_front().unwrap());
 
             // Give it to the search buffer
             self.search_buffer.push_back(*byte);
@@ -137,18 +137,18 @@ impl SlidingWindow {
             Some(*byte)
         } else {
             // Is the look ahead buffer empty ?
-            if self.is_empty(){
+            if self.is_empty() {
                 return None;
             }
-            
+
             // Is the search buffer already full ?
-            if self.search_buffer.len() == self.search_buffer.capacity(){
-                    // Throw the latest byte from search buffer
-                    self.search_buffer.pop_front();
+            if self.search_buffer.len() == self.search_buffer.capacity() {
+                // Throw the latest byte from search buffer
+                self.search_buffer.pop_front();
             }
 
             // Recover next byte on look ahead buffer
-            let byte : &u8 = &(self.look_ahead_buffer.pop_front().unwrap());
+            let byte: &u8 = &(self.look_ahead_buffer.pop_front().unwrap());
 
             // Give it to the search buffer
             self.search_buffer.push_back(*byte);
@@ -172,12 +172,9 @@ impl SlidingWindow {
         if one.1 > other.1 { one } else { other }
     }
 
-    fn get_offset_len(
-        search_chunk: &VecDeque<u8>,
-        la_chunk: &VecDeque<u8>
-    ) -> (usize, usize) {
-        let mut curr_best : (usize, usize) = (0,0);
-        
+    fn get_offset_len(search_chunk: &VecDeque<u8>, la_chunk: &VecDeque<u8>) -> (usize, usize) {
+        let mut curr_best: (usize, usize) = (0, 0);
+
         let mut total_match = 0usize;
         let mut i_candidate = 0usize;
         let mut i = 0usize;
@@ -190,22 +187,22 @@ impl SlidingWindow {
                 // Increment total_match of this one
                 total_match += 1;
                 // Looking next value in la_chunk
-                j+=1;
+                j += 1;
             } else if search_chunk.get(i) == la_chunk.get(j) && total_match != 0 {
                 // Increment the total match of previously candidate found
                 total_match += 1;
                 // Looking next value in la_chunk
-                j+=1;
+                j += 1;
             } else if search_chunk.get(i) != la_chunk.get(j) {
                 // Build candidate
                 let candidate = (search_chunk.len() - i_candidate, total_match);
                 // Save the best candidate
                 curr_best = SlidingWindow::max(curr_best, candidate);
-                // Reset 
+                // Reset
                 j = 0;
                 total_match = 0;
             }
-            i+=1;
+            i += 1;
         }
         curr_best
     }
@@ -222,12 +219,12 @@ impl SlidingWindow {
         // In other case we calculate the token for the current state of both analysis buffer
         Token::new(SlidingWindow::get_offset_len(
             &self.search_buffer,
-            &self.look_ahead_buffer
+            &self.look_ahead_buffer,
         ))
     }
 
     fn decide(&self, token: Token) -> Decision {
-        match token.get_size() < token.get_rep_length(){
+        match token.get_size() < token.get_rep_length() {
             true => Decision::TakeToken(token),
             false => Decision::KeepChunkf,
         }
@@ -240,10 +237,10 @@ impl SlidingWindow {
     pub fn compress(&mut self, mut file: &File, extension: String) -> Result<()> {
         // f is a file that is opened in write only mode
         // Init the batch
-        let mut batch : Vec<u8> = Vec::new();
-        
+        let mut batch: Vec<u8> = Vec::new();
+
         // Add the extension as the header
-        for b in extension.as_bytes(){
+        for b in extension.as_bytes() {
             batch.push(*b);
         }
 
@@ -252,7 +249,6 @@ impl SlidingWindow {
         self.init()?;
         // We init the variable that will recover values from the file
         let mut byte: u8;
-        
 
         while !(self.is_empty()) {
             // Doesn't stop while the look ahead buffer is not empty
@@ -262,7 +258,7 @@ impl SlidingWindow {
             match self.decide(token) {
                 Decision::TakeToken(t) => {
                     // Push token to the batch
-                    for byte in t.get_datas(){
+                    for byte in t.get_datas() {
                         batch.push(*byte);
                     }
 
@@ -272,7 +268,7 @@ impl SlidingWindow {
                 Decision::KeepChunkf => {
                     // We slide the window and we recover the byte from the file
                     byte = self.slide().unwrap();
-                    
+
                     // We push that byte into the batch
                     batch.push(byte);
                 }
@@ -283,7 +279,6 @@ impl SlidingWindow {
                 file.write_all(&batch)?;
                 batch.clear();
             };
-
         }
         // When we finish reading the file, we can write the last content of the batch
         if batch.len() > 0 {
@@ -351,14 +346,14 @@ mod tests {
     }
 
     #[test]
-    fn test_init(){
+    fn test_init() {
         let buff = vec![24u8, 15, 32, 34, 78, 89, 90, 245, 66, 79, 80, 32];
         let test = vec![24, 15, 32, 34, 78, 89, 90, 245, 66, 79, 80, 32];
         let mut sw = SlidingWindow::new(12usize, buff);
         let init_rest = sw.init();
         assert_eq!(init_rest.is_ok(), true); // Verifying the result of process
         assert_eq!(sw.look_ahead_buffer.len(), sw.look_ahead_buffer.capacity()); // Verifying the length of look ahead buffer
-        for i in 0..sw.look_ahead_buffer.len(){
+        for i in 0..sw.look_ahead_buffer.len() {
             assert_eq!(sw.look_ahead_buffer.pop_front(), Some(test[i])); // Verifying that correct values are sent to the look ahead buffer
         }
     }
