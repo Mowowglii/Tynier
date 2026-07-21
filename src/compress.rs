@@ -20,15 +20,31 @@ impl Token {
         let mut d: Vec<u8> = Vec::new();
         // Encode delimiter (open)
         d.push(60u8); // push "<"
-        // Encode offset
-        for byte1 in offset_len_tuple.0.to_string().as_bytes() {
-            d.push(*byte1);
+        // Encode offset if not 0
+        if offset_len_tuple.0 == 0usize {
+            d.push(0);
+        } else {
+            for byte1 in offset_len_tuple.0.to_le_bytes() {
+                if byte1 != 0 {
+                    d.push(byte1);
+                } else {
+                    break;
+                }
+            } 
         }
         // Encode separator
         d.push(59u8); // push ";"
-        // Encode the length
-        for byte2 in offset_len_tuple.1.to_string().as_bytes() {
-            d.push(*byte2);
+        // Encode the length if not 0
+        if offset_len_tuple.1 == 0 {
+            d.push(0);
+        } else {
+            for byte2 in offset_len_tuple.1.to_le_bytes() {
+                if byte2 != 0 {
+                    d.push(byte2);
+                } else {
+                    break;
+                }
+            }
         }
         // Encode delimiter (close)
         d.push(62u8); // push ">"
@@ -91,7 +107,6 @@ impl SlidingWindow {
         while self.next_byte < self.on.len()
             && self.look_ahead_buffer.len() < self.look_ahead_buffer.capacity()
         {
-            // Slide from data to look_ahead
             self.look_ahead_buffer.push_back(self.on[self.next_byte]);
             self.next_byte += 1;
         }
@@ -99,70 +114,50 @@ impl SlidingWindow {
     }
 
     pub fn slide(&mut self) -> Option<u8> {
-        match self.next_byte < self.on.len() {
-            // Is there a next byte ?
-            true => {
-                match self.look_ahead_buffer.len() == self.look_ahead_buffer.capacity() {
-                    // the Sliding Window must be initialized properly
-                    true => {
-                        match self.search_buffer.len() < self.search_buffer.capacity() {
-                            // The search buffer is not full
-                            true => {
-                                // We could just return the value that quit the look ahead buffer
-                                // We recover the value from look ahead buffer
-                                let byte = &(self.look_ahead_buffer.pop_front().unwrap());
-
-                                // We slide value from look_ahead to search
-                                self.search_buffer.push_back(*byte);
-
-                                // Slide from data to the look ahead
-                                self.look_ahead_buffer.push_back(self.on[self.next_byte]);
-
-                                // Update the current byte
-                                self.next_byte += 1usize;
-
-                                Some(*byte)
-                            }
-                            false => {
-                                // We just have to slide everything
-                                // Recover byte from look ahead buffer
-                                let byte = &(self.look_ahead_buffer.pop_front().unwrap());
-
-                                self.search_buffer.pop_front().unwrap(); // We can throw away the byte from the search buffer
-
-                                // Slide from look ahead to search
-                                self.search_buffer.push_back(*byte);
-
-                                // Slide from data to the look ahead
-                                self.look_ahead_buffer.push_back(self.on[self.next_byte]);
-
-                                // Update the current byte
-                                self.next_byte += 1usize;
-
-                                Some(*byte)
-                            }
-                        }
-                    }
-                    false => {
-                        panic!("Look Ahead Buffer not initialized properly !!!!");
-                    }
-                }
-            }
-            false => {
-                if !(self.look_ahead_buffer.is_empty()) {
-                    // We just have to slide the window without filling the look ahead buffer
-                    let byte = &(self.look_ahead_buffer.pop_front().unwrap());
-
-                    // Throw byte from search buffer
+        // Is there a next byte ? 
+        if self.next_byte < self.on.len() {
+            // Is the search buffer already full ?
+            if self.search_buffer.len() == self.search_buffer.capacity(){
+                    // Throw the latest byte from search buffer
                     self.search_buffer.pop_front();
-
-                    self.search_buffer.push_back(*byte); // slide from look ahead to search
-
-                    Some(*byte)
-                } else {
-                    None
-                }
             }
+            // Recover next byte on look ahead buffer
+            let byte : &u8 = &(self.look_ahead_buffer.pop_front().unwrap());
+
+            // Give it to the search buffer
+            self.search_buffer.push_back(*byte);
+
+            // Fill the look ahead buffer
+            self.look_ahead_buffer.push_back(self.on[self.next_byte]);
+
+            // Update the next byte index
+            self.next_byte += 1;
+
+            // Return the byte
+            Some(*byte)
+        } else {
+            // Is the look ahead buffer empty ?
+            if self.is_empty(){
+                return None;
+            }
+            
+            // Is the search buffer already full ?
+            if self.search_buffer.len() == self.search_buffer.capacity(){
+                    // Throw the latest byte from search buffer
+                    self.search_buffer.pop_front();
+            }
+
+            // Recover next byte on look ahead buffer
+            let byte : &u8 = &(self.look_ahead_buffer.pop_front().unwrap());
+
+            // Give it to the search buffer
+            self.search_buffer.push_back(*byte);
+
+            // Update the next byte index
+            self.next_byte += 1;
+
+            // Return the byte
+            Some(*byte)
         }
     }
 
@@ -232,7 +227,7 @@ impl SlidingWindow {
     }
 
     fn decide(&self, token: Token) -> Decision {
-        match token.get_size() < token.get_rep_length() {
+        match token.get_size() < token.get_rep_length(){
             true => Decision::TakeToken(token),
             false => Decision::KeepChunkf,
         }
@@ -244,13 +239,21 @@ impl SlidingWindow {
 
     pub fn compress(&mut self, mut file: &File, extension: String) -> Result<()> {
         // f is a file that is opened in write only mode
-        // We also need to encode the original file extension as header of the file
-        file.write_all(extension.as_bytes())?;
-        file.write_all("\n".as_bytes())?;
+        // Init the batch
+        let mut batch : Vec<u8> = Vec::new();
+        
+        // Add the extension as the header
+        for b in extension.as_bytes(){
+            batch.push(*b);
+        }
+
+        batch.push(10u8);
         // We init the SlidingWindow
         self.init()?;
         // We init the variable that will recover values from the file
         let mut byte: u8;
+        
+
         while !(self.is_empty()) {
             // Doesn't stop while the look ahead buffer is not empty
             // We construct the token for the current state of both queues
@@ -258,18 +261,33 @@ impl SlidingWindow {
             // We decide...
             match self.decide(token) {
                 Decision::TakeToken(t) => {
-                    // We write the token found into the file
-                    file.write_all(t.get_datas())?;
-                    // We jump slide by the length of the data replaced
+                    // Push token to the batch
+                    for byte in t.get_datas(){
+                        batch.push(*byte);
+                    }
+
+                    // Jump the replaced text
                     self.jmp(t.get_rep_length())?;
                 }
                 Decision::KeepChunkf => {
                     // We slide the window and we recover the byte from the file
                     byte = self.slide().unwrap();
-                    // We can write that byte in the file
-                    file.write_all(&[byte])?;
+                    
+                    // We push that byte into the batch
+                    batch.push(byte);
                 }
             }
+
+            // When batch contains more than 30 bytes, we can write it in the file and clear the batch
+            if batch.len() >= 30 {
+                file.write_all(&batch)?;
+                batch.clear();
+            };
+
+        }
+        // When we finish reading the file, we can write the last content of the batch
+        if batch.len() > 0 {
+            file.write_all(&batch)?;
         }
         Ok(())
     }
@@ -330,6 +348,19 @@ mod tests {
         let seconds = VecDeque::from([4, 5, 6, 8, 7]);
         let result = SlidingWindow::get_offset_len(&first, &seconds);
         assert_eq!(result, (5, 3))
+    }
+
+    #[test]
+    fn test_init(){
+        let buff = vec![24u8, 15, 32, 34, 78, 89, 90, 245, 66, 79, 80, 32];
+        let test = vec![24, 15, 32, 34, 78, 89, 90, 245, 66, 79, 80, 32];
+        let mut sw = SlidingWindow::new(12usize, buff);
+        let init_rest = sw.init();
+        assert_eq!(init_rest.is_ok(), true); // Verifying the result of process
+        assert_eq!(sw.look_ahead_buffer.len(), sw.look_ahead_buffer.capacity()); // Verifying the length of look ahead buffer
+        for i in 0..sw.look_ahead_buffer.len(){
+            assert_eq!(sw.look_ahead_buffer.pop_front(), Some(test[i])); // Verifying that correct values are sent to the look ahead buffer
+        }
     }
 
     #[test]
