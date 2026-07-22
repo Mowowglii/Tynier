@@ -24,13 +24,20 @@ impl Token {
         if offset_len_tuple.0 == 0usize {
             d.push(0);
         } else {
-            for byte1 in offset_len_tuple.0.to_le_bytes() {
-                if byte1 != 0 {
-                    d.push(byte1);
-                } else {
+            // Recover the significant bytes from the le bytes representation
+            let offset_le_bytes : [u8; 8] = offset_len_tuple.0.to_le_bytes();
+            for i in 1usize..9usize{
+                if offset_le_bytes[8-i] != 0{
+                    // Push the length of the offset le bytes representation
+                    d.push(8u8-u8::try_from(i).ok().unwrap()+1); // Because i is strictly between 1 and 8, this conversion should work
+                    // Push the offset le bytes representation
+                    for byte in &offset_le_bytes[..9-i]{
+                        d.push(*byte);
+                    }
                     break;
                 }
             }
+
         }
         // Encode separator
         d.push(59u8); // push ";"
@@ -38,10 +45,16 @@ impl Token {
         if offset_len_tuple.1 == 0 {
             d.push(0);
         } else {
-            for byte2 in offset_len_tuple.1.to_le_bytes() {
-                if byte2 != 0 {
-                    d.push(byte2);
-                } else {
+            // Recover the significant bytes from the le bytes representation
+            let length_le_bytes : [u8; 8] = offset_len_tuple.1.to_le_bytes();
+            for i in 1usize..9usize{
+                if length_le_bytes[8-i] != 0{
+                    // Push the length of the offset le bytes representation
+                    d.push(8u8-u8::try_from(i).ok().unwrap()+1); // Because i is strictly between 1 and 8, this conversion should work
+                    // Push the offset le bytes representation
+                    for byte in &length_le_bytes[..9-i]{
+                        d.push(*byte);
+                    }
                     break;
                 }
             }
