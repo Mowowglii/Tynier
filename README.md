@@ -13,7 +13,8 @@ cargo build --release
 
 ## État du projet
 
-⚠️ Work in Progress
+Compression terminée ✅
+Decompression en cours ⏳
 
 Apprentissages :
 
