@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Error, Result};
 use std::fs;
 use std::fs::File;
 use std::path::Path;
@@ -35,10 +35,10 @@ pub fn generate_output(
                     let output = std::fs::File::create(path_to_file)?;
                     Ok(Some((output, ext)))
                 } else {
-                    Ok(None)
+                    Err(Error::msg("Original Extension missing"))
                 }
             } else {
-                Ok(None)
+                Err(Error::msg("file is not compressed in format lzss"))
             }
         } else {
             // if we want to compress the file
@@ -50,18 +50,18 @@ pub fn generate_output(
                 let output = std::fs::File::create(path_to_file)?;
                 Ok(Some((output, extension)))
             } else {
-                Ok(None)
+                Err(Error::msg("File already compressed"))
             }
         }
     } else {
-        Ok(None)
+        Err(Error::msg("Entered path isn't a file"))
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::io::Write;
+    use std::{assert_eq, io::Write};
     use tempfile::Builder;
 
     //Helper
@@ -77,10 +77,54 @@ mod tests {
 
     #[test]
     fn test_generate_output() {
-        let res1 = generate_output(Path::new("test.txt"), false, None);
-        assert_eq!(res1.is_ok(), true);
-        let res2 = res1.unwrap();
-        assert_eq!(res2.is_some(), true);
+        // NORMAL COMPRESSION TEST
+        // Create temporary file
+        let tmp_file = create_tmp_file("test.tmp", "hello world");
+        
+        // Generate output
+        let res_process = generate_output(tmp_file.path(), false, None);
+
+        // Checking process
+        assert_eq!(res_process.is_ok(), true);
+
+        // Verifying Generation
+        let res_generation = res_process.unwrap();
+        assert_eq!(res_generation.is_some(), true);
+
+        // NO FILE COMPRESSION TEST
+        let rp2 = generate_output(Path::new("test.nofile"), false, None);
+
+        // Checking process
+        assert_eq!(rp2.is_err(), true);
+
+        // NORMAL DECOMPRESS TEST
+        let comp_tmp_file = tmp_file.path().with_extension("lzss");
+        let rp3 = generate_output(comp_tmp_file.as_path(), true, Some("tmp".to_string()));
+
+        // Checking process
+        assert_eq!(rp3.is_ok(), true);
+
+        // Verify Generation
+        let rg3 = rp3.unwrap();
+        assert_eq!(rg3.is_some(), true);
+
+        // WITHOUT OG EXTENSION TEST
+        let rp4 = generate_output(comp_tmp_file.as_path(), true, None);
+
+        // Checking process
+        assert_eq!(rp4.is_err(), true);
+
+        // NO NEED DECOMPRESSION FILE TEST
+        let rp5 = generate_output(tmp_file.path(), true, Some("tmp".to_string()));
+
+        // Checking process
+        assert_eq!(rp5.is_err(), true);
+
+        // ALREADY COMPRESSED FILE TEST
+        let rp6 = generate_output(comp_tmp_file.as_path(), false, None);
+
+        // Checking process
+        assert_eq!(rp6.is_err(), true);
     }
 
     #[test]
